@@ -35,7 +35,7 @@ def centroid(x, y):
         yC += (y[i] + y[i + 1]) * (x[i] * y[i + 1] - x[i+1] * y[i])
     return xC / 6 / A, yC / 6 / A
 
-def inertia(x, y, onlyX=False, onlyY=False, onlyXY=False, debug=False):
+def inertia(x, y, onlyX=False, onlyY=False, onlyXY=False, debug=False, tupleInsteadOfTensor=False):
     # https://en.wikipedia.org/wiki/Second_moment_of_area#Any_cross_section_defined_as_polygon
     xC, yC = centroid(x, y)
     ICx, ICy, ICxy = 0, 0, 0
@@ -52,27 +52,36 @@ def inertia(x, y, onlyX=False, onlyY=False, onlyXY=False, debug=False):
     ICx /= 12
     ICy /= 12
     ICxy /= 24
+    ICz = ICx + ICy
     if onlyX: return ICx
     if onlyY: return ICy
     if onlyXY: return ICxy
+    I = [[ICx, ICxy, 0], [ICxy, ICy, 0], [0, 0, ICz]]
     if not debug:
-        return ICx, ICy, ICxy
-    else: return ICx, ICy, ICxy, xC, yC, area(x, y, signed=False)
+        if tupleInsteadOfTensor:
+            return ICx, ICy, ICxy, ICz
+        return I
+    else: 
+        if tupleInsteadOfTensor:
+            ICx, ICy, ICxy, ICz, xC, yC, area(x, y, signed=False)
+        return I, xC, yC, area(x, y, signed=False)
 
 
 x, y = load("blade")
-ICx, ICy, ICxy, xC, yC, A = inertia(x, y, debug=True)
-print("x = ")
-print(x)
-print("y = ")
-print(y)
+I, xC, yC, A = inertia(x, y, debug=True)
+#print("x = ")
+#print(x)
+#print("y = ")
+#print(y)
 print("xC = ")
 print(xC)
 print("yC = ")
 print(yC)
-print("ICx = ")
-print(ICx)
-print("ICy = ")
-print(ICy)
-print("ICxy = ")
-print(ICxy)
+print('I (m^4) = ')
+print(I)
+#print("ICx = ")
+#print(ICx)
+#print("ICy = ")
+#print(ICy)
+#print("ICxy = ")
+#print(ICxy)
