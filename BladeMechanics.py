@@ -1,10 +1,17 @@
-from numpy import loadtxt
+import math
 
-def load(filename):
-    lines = loadtxt(filename, comments="#", delimiter=" ", unpack=False)
-    x = [float(n) for n in lines[:, 0]]
-    y = [float(n) for n in lines[:, 1]]
-    return x, y
+def load(filename, usenumpy=False, xindex=0, yindex=1):
+    if usenumpy:
+        from numpy import loadtxt
+        lines = loadtxt(filename, comments="#", delimiter=" ", unpack=False)
+        x = [float(n) for n in lines[:, xindex]]
+        y = [float(n) for n in lines[:, yindex]]
+        return x, y
+    else:
+        lines = open(filename, "r").readlines()
+        x = [float(n.split(' ')[xindex]) for n in lines if not n.startswith("#")]
+        y = [float(n.split(' ')[yindex]) for n in lines if not n.startswith("#")]
+        return x, y
 
 def array_delta(array, delta):
     array[:] = [x + delta for x in array]
@@ -35,7 +42,27 @@ def centroid(x, y):
         yC += (y[i] + y[i + 1]) * (x[i] * y[i + 1] - x[i+1] * y[i])
     return xC / 6 / A, yC / 6 / A
 
-def inertia(x, y, onlyX=False, onlyY=False, onlyXY=False, debug=False, tupleInsteadOfTensor=False):
+def solvequadratic(a, b, c):
+    if a != 0:
+        x1 = (-b + math.sqrt(b**2 - 4 * a * c)) / 2 / a
+        x2 = (-b - math.sqrt(b**2 - 4 * a * c)) / 2 / a
+        return x1, x2
+    else:
+        return -0.5*b/a, -0.5*b/a
+
+def eig(matrix):
+    a = matrix[0][0]
+    b = matrix[0][1]
+    c = matrix[1][0]
+    d = matrix[1][1]
+    lambda1, lambda2 = solvequadratic(1,-a-d, a*d - c*b)
+    vector1 = [1, b / (lambda1-a)]
+    vector2 = [1, b / (lambda2-a)]
+
+    return lambda1, lambda2, vector1, vector2
+
+
+def inertia(x, y, principal=False, onlyX=False, onlyY=False, onlyXY=False, debug=False, tupleInsteadOfTensor=False):
     # https://en.wikipedia.org/wiki/Second_moment_of_area#Any_cross_section_defined_as_polygon
     xC, yC = centroid(x, y)
     ICx, ICy, ICxy = 0, 0, 0
@@ -57,18 +84,27 @@ def inertia(x, y, onlyX=False, onlyY=False, onlyXY=False, debug=False, tupleInst
     if onlyY: return ICy
     if onlyXY: return ICxy
     I = [[ICx, ICxy, 0], [ICxy, ICy, 0], [0, 0, ICz]]
-    if not debug:
-        if tupleInsteadOfTensor:
-            return ICx, ICy, ICxy, ICz
-        return I
-    else: 
-        if tupleInsteadOfTensor:
-            ICx, ICy, ICxy, ICz, xC, yC, area(x, y, signed=False)
-        return I, xC, yC, area(x, y, signed=False)
+    I1, I2, v1, v2 = eig([[ICx, ICxy], [ICxy, ICy]])
+    direction = math.atan(v1[1] / v1[0])
+    if principal:
+        if not debug:
+            return [I1, I2, ICz], direction
+        else:
+            return [I1, I2, ICz], direction, ICx, ICy, ICxy, ICz, xC, yC, area(x, y, signed=False)
+    else:
+        if not debug:
+            if tupleInsteadOfTensor:
+                return ICx, ICy, ICxy, ICz
+            return I
+        else:
+            if tupleInsteadOfTensor:
+                ICx, ICy, ICxy, ICz, xC, yC, area(x, y, signed=False)
+            return I, xC, yC, area(x, y, signed=False)
 
 
 x, y = load("blade")
-I, xC, yC, A = inertia(x, y, debug=True)
+#I, xC, yC, A = inertia(x, y, debug=True, principal=True)
+Iprincipal, direction, ICx, ICy, ICxy, ICz, xC, yC, A = inertia(x, y, debug=True, principal=True)
 #print("x = ")
 #print(x)
 #print("y = ")
@@ -77,8 +113,14 @@ print("xC = ")
 print(xC)
 print("yC = ")
 print(yC)
-print('I (m^4) = ')
-print(I)
+print('A = ')
+print(A)
+#print('I (m^4) = ')
+#print(I)
+print('I principal = ')
+print(Iprincipal)
+print('Direction = (deg)')
+print(direction * math.pi / 180)
 #print("ICx = ")
 #print(ICx)
 #print("ICy = ")
