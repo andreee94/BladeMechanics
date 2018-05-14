@@ -56,8 +56,14 @@ def eig(matrix):
     c = matrix[1][0]
     d = matrix[1][1]
     lambda1, lambda2 = solvequadratic(1,-a-d, a*d - c*b)
-    vector1 = [1, b / (lambda1-a)]
-    vector2 = [1, b / (lambda2-a)]
+    # TODO fix when c = 0 and in any particular case
+    if abs(lambda1-a)>1e-10:
+        vector1 = [1, b / (lambda1-a)]
+    else: vector1 = [1, (lambda1-d)/c]
+
+    if abs(lambda2-a)>1e-10:
+        vector2 = [1, b / (lambda2-a)]
+    else: vector2 = [1, (lambda2-d)/c]
 
     return lambda1, lambda2, vector1, vector2
 
@@ -120,7 +126,7 @@ print(A)
 print('I principal = ')
 print(Iprincipal)
 print('Direction = (deg)')
-print(direction * math.pi / 180)
+print(direction / math.pi * 180)
 #print("ICx = ")
 #print(ICx)
 #print("ICy = ")
